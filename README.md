@@ -10,7 +10,8 @@ bundled Electron 42 runtime, the native `@ant/claude-native` and `node-pty`
 modules, and the Cowork micro-VM helpers are all shipped as-is and just
 patched for the Nix store.
 
-- Version: **1.17377.0**
+- Version: tracks the latest release — pinned in `package.nix`, auto-bumped
+  daily from Anthropic's apt index (see [Updates](#updates))
 - Platforms: `x86_64-linux`, `aarch64-linux`
 - License: unfree (Anthropic Consumer Terms). The flake scopes an
   `allowUnfreePredicate` to just this package, so no global unfree opt-in is
@@ -119,9 +120,21 @@ Native Wayland is opt-in via the usual nixpkgs switch:
 NIXOS_OZONE_WL=1 claude-desktop
 ```
 
-## Updating to a new release
+## Updates
 
-1. Find the latest version + hashes in the apt index:
-   `https://downloads.claude.ai/claude-desktop/apt/stable/dists/stable/main/binary-amd64/Packages`
-2. Bump `version` in `package.nix` and update both `hash`es (convert the
-   `SHA256` from the index with `nix hash convert --hash-algo sha256 --to sri <hex>`).
+`.github/workflows/update.yml` runs daily (and on manual dispatch): it reads
+Anthropic's apt index, and when a newer release is published it bumps
+`version` + both arch hashes in `package.nix` and commits the bump. So the
+repo tracks upstream on its own.
+
+To pull a new version onto your machine, re-lock this input and rebuild:
+
+```bash
+nix flake update claude-desktop   # in your flake — re-locks just this input
+nixos-rebuild switch              # or `nh os switch`
+```
+
+To bump by hand (e.g. the workflow is off): find the latest version in the
+apt index (`.../stable/main/binary-amd64/Packages`), set `version` in
+`package.nix`, and update both `hash`es —
+`nix hash convert --hash-algo sha256 --to sri <SHA256>`.
