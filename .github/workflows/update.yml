@@ -1,0 +1,71 @@
+name: update
+
+# Auto-bump the pinned Claude Desktop version + hashes from Anthropic's apt
+# repo. Runs daily and on manual dispatch. When a newer version appears in the
+# repo's Packages index, this rewrites package.nix and commits the bump; you
+# still pull it with `nix flake update claude-desktop` + rebuild.
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for a newer release and bump package.nix
+        id: bump
+        run: |
+          set -euo pipefail
+          base="https://downloads.claude.ai/claude-desktop/apt/stable/dists/stable/main/binary"
+
+          # hex sha256 -> SRI (sha256-<base64>), no Nix required
+          sri() { printf 'sha256-%s' "$(printf '%s' "$1" | xxd -r -p | base64 -w0)"; }
+
+          # highest "Version SHA256" pair for an architecture
+          latest() {
+            curl -fsSL "$base-$1/Packages" \
+              | awk '/^Version:/{v=$2} /^SHA256:/{print v" "$2}' \
+              | sort -V | tail -1
+          }
+
+          read -r new_ver amd_sha < <(latest amd64)
+          # arm64 hash for that same version (skip the bump if arm64 hasn't published it yet)
+          arm_sha="$(curl -fsSL "$base-arm64/Packages" \
+            | awk -v v="$new_ver" '/^Version:/{c=$2} /^SHA256:/{if(c==v)print $2}' | tail -1)"
+
+          cur_ver="$(grep -oP 'version = "\K[^"]+' package.nix | head -1)"
+          echo "current=$cur_ver  latest=$new_ver"
+
+          if [ "$new_ver" = "$cur_ver" ]; then
+            echo "Already up to date."
+            exit 0
+          fi
+          if [ -z "$arm_sha" ]; then
+            echo "arm64 has not published $new_ver yet; skipping this run."
+            exit 0
+          fi
+
+          sed -i "s|version = \"[^\"]*\"|version = \"$new_ver\"|" package.nix
+          sed -i "/_amd64.deb/{n;s|hash = \"[^\"]*\"|hash = \"$(sri "$amd_sha")\"|;}" package.nix
+          sed -i "/_arm64.deb/{n;s|hash = \"[^\"]*\"|hash = \"$(sri "$arm_sha")\"|;}" package.nix
+
+          {
+            echo "changed=true"
+            echo "old=$cur_ver"
+            echo "new=$new_ver"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Commit the bump
+        if: steps.bump.outputs.changed == 'true'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.nix
+          git commit -m "claude-desktop: ${{ steps.bump.outputs.old }} -> ${{ steps.bump.outputs.new }}"
+          git push
