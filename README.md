@@ -19,7 +19,7 @@ patched for the Nix store.
 ## Try it
 
 ```bash
-nix run github:nmcbride/claude-desktop-nixos   # or  nix run .
+nix run github:nmcbride/claude-desktop-nix   # or  nix run .
 ```
 
 ## Install
@@ -29,7 +29,7 @@ nix run github:nmcbride/claude-desktop-nixos   # or  nix run .
 ```nix
 # flake.nix
 {
-  inputs.claude-desktop.url = "github:nmcbride/claude-desktop-nixos";
+  inputs.claude-desktop.url = "github:nmcbride/claude-desktop-nix";
 
   outputs = { nixpkgs, claude-desktop, ... }: {
     nixosConfigurations.myhost = nixpkgs.lib.nixosSystem {
