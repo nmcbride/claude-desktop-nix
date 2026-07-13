@@ -58,7 +58,7 @@
 
 let
   pname = "claude-desktop";
-  version = "1.19367.0";
+  version = "1.20186.1";
 
   # Official Anthropic apt repo:
   #   https://downloads.claude.ai/claude-desktop/apt/stable
@@ -66,11 +66,11 @@ let
   sources = {
     x86_64-linux = fetchurl {
       url = "${baseUrl}/claude-desktop_${version}_amd64.deb";
-      hash = "sha256-dvVwcwwRhZJOJCPF+IonvsF8HnrbBV7NCUAaDpOpKZs=";
+      hash = "sha256-C23sBf5ruo+h9BpVUoNM4hBzNWX7oC4tcw79/e4Y9ts=";
     };
     aarch64-linux = fetchurl {
       url = "${baseUrl}/claude-desktop_${version}_arm64.deb";
-      hash = "sha256-mKsOnizz7K4HOjjYHsq9K4XH5/4xnPct9XVkKRUEWoM=";
+      hash = "sha256-/WiIAPDaiwmIUMlq+FhivSlJ/YVOlph4AP4XwS+rfxQ=";
     };
   };
 
